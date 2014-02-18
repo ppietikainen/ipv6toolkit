@@ -743,3 +743,6 @@ int					string_escapes(char *, unsigned int *, unsigned int);
 size_t				Strnlen(const char *, size_t);
 
 
+#ifdef WITH_LIBCAPNG
+#include <cap-ng.h>
+#endif

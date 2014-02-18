@@ -162,6 +162,7 @@ u_int8_t				hoplimit;
 char 					plinkaddr[ETHER_ADDR_PLEN], pv4addr[INET_ADDRSTRLEN];
 char 					psrcaddr[INET6_ADDRSTRLEN], pdstaddr[INET6_ADDRSTRLEN], pv6addr[INET6_ADDRSTRLEN];
 unsigned char 			verbose_f=FALSE;
+int                             privileged_f=FALSE;
 unsigned char 			rand_src_f=FALSE, rand_link_src_f=FALSE;
 unsigned char 			accepted_f=FALSE, configfile_f=FALSE, dstaddr_f=FALSE, hdstaddr_f=FALSE, dstprefix_f=FALSE;
 unsigned char			print_f=FALSE, print_local_f=FALSE, print_global_f=FALSE, probe_echo_f=FALSE, probe_unrec_f=FALSE, probe_f=FALSE;
@@ -280,6 +281,7 @@ int main(int argc, char **argv){
 		{"sleep", required_argument, 0, 'z'},
 		{"config-file", required_argument, 0, 'c'},
 		{"verbose", no_argument, 0, 'v'},
+		{"privileged", no_argument, &privileged_f, 1},
 		{"help", no_argument, 0, 'h'}
 	};
 
@@ -316,6 +318,8 @@ int main(int argc, char **argv){
 		option= r;
 
 		switch(option) {
+   		        case 0:
+			  break;
 			case 'i':  /* Interface */
 				strncpy(idata.iface, optarg, IFACE_LENGTH-1);
 				idata.iface[IFACE_LENGTH-1]=0;
@@ -1079,8 +1083,10 @@ int main(int argc, char **argv){
 	    to pass &idata as an argument
 	 */
 	verbose_f= idata.verbose_f;
-
-	if(geteuid()){
+#ifdef WITH_LIBCAPNG
+	privileged_f=privileged_f || capng_have_capability(CAPNG_EFFECTIVE, CAP_NET_RAW);
+#endif
+	if(geteuid() && !privileged_f){
 		puts("scan6 needs superuser privileges to run");
 		exit(EXIT_FAILURE);
 	}

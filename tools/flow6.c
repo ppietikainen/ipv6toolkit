@@ -114,6 +114,7 @@ u_int8_t			hoplimit;
 
 char 				plinkaddr[ETHER_ADDR_PLEN];
 char 				psrcaddr[INET6_ADDRSTRLEN], pdstaddr[INET6_ADDRSTRLEN], pv6addr[INET6_ADDRSTRLEN];
+int                     privileged_f=0;
 unsigned char 		localaddr_f=0;
 unsigned char		srcprefix_f=0, hoplimit_f=0, flowidp_f=0, dstport_f=0, protocol_f=0;
 
@@ -164,6 +165,7 @@ int main(int argc, char **argv){
 		{"dst-port", no_argument, 0, 'p'},
 		{"flow-label-policy", no_argument, 0, 'W'},
 		{"verbose", no_argument, 0, 'v'},
+		{"privileged", no_argument, &privileged_f, 1},
 		{"help", no_argument, 0, 'h'}
 	};
 
@@ -189,6 +191,8 @@ int main(int argc, char **argv){
 		option= r;
 
 		switch(option) {
+			case 0: 
+ 			        break;
 
 			case 'i':  /* Interface */
 				strncpy(idata.iface, optarg, IFACE_LENGTH-1);
@@ -300,10 +304,13 @@ int main(int argc, char **argv){
 		} /* switch */
 	} /* while(getopt) */
 
-	if(geteuid()) {
-		puts("flow6 needs root privileges to run.");
-		exit(EXIT_FAILURE);
-	}
+#ifdef WITH_LIBCAPNG
+        privileged_f=privileged_f || capng_have_capability(CAPNG_EFFECTIVE, CAP_NET_RAW);
+#endif
+        if(geteuid() && !privileged_f){
+	  puts("flow6 needs raw network socket privileges to run");
+	  exit(EXIT_FAILURE);
+        }
 
 	if(!idata.iface_f){
 		if(idata.dstaddr_f && IN6_IS_ADDR_LINKLOCAL(&(idata.dstaddr))){
@@ -738,6 +745,7 @@ void print_help(void){
 	"  --flow-label-policy, -W   Assess the Flow Label generation policy\n"
 	"  --help, -h                Print help for the flow6 tool\n"
 	"  --verbose, -v             Be verbose\n"
+	"  --privileged              Assume that the user is fully privileged\n"     
 	"\n"
 	"Programmed by Fernando Gont on behalf of SI6 Networks <http://www.si6networks.com>\n"
 	"Please send any bug reports to <fgont@si6networks.com>\n"

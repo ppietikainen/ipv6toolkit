@@ -1567,6 +1567,10 @@ void release_privileges(void){
 			}
 		}
 	}
+#ifdef WITH_LIBCAPNG
+        capng_clear(CAPNG_SELECT_BOTH);
+        capng_apply(CAPNG_SELECT_BOTH);
+#endif
 }
 
 

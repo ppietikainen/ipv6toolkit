@@ -138,6 +138,7 @@ u_int8_t			hoplimit;
 
 char 				plinkaddr[ETHER_ADDR_PLEN];
 char 				psrcaddr[INET6_ADDRSTRLEN], pdstaddr[INET6_ADDRSTRLEN], pv6addr[INET6_ADDRSTRLEN];
+int                     privileged_f=0;
 unsigned char 		floodt_f=0, listen_f = 0, multicastdst_f=0, accepted_f=0, loop_f=0, sleep_f=0;
 unsigned char		targetprefix_f=0, hoplimit_f=0, newdata_f=0, floods_f=0;
 
@@ -212,6 +213,7 @@ int main(int argc, char **argv){
 		{"sleep", required_argument, 0, 'z'},
 		{"listen", no_argument, 0, 'L'},
 		{"verbose", no_argument, 0, 'v'},
+		{"privileged", no_argument, &privileged_f, 1},
 		{"help", no_argument, 0, 'h'}
 	};
 
@@ -241,8 +243,9 @@ int main(int argc, char **argv){
 		option= r;
 
 		switch(option) {
-
-			case 'i':  /* Interface */
+		        case 0:
+			        break;
+ 			case 'i':  /* Interface */
 				strncpy(idata.iface, optarg, IFACE_LENGTH-1);
 				idata.iface[IFACE_LENGTH-1]=0;
 				idata.ifindex= if_nametoindex(idata.iface);
@@ -975,10 +978,14 @@ int main(int argc, char **argv){
 		} /* switch */
 	} /* while(getopt) */
 
-	if(geteuid()) {
-		puts("icmp6 needs root privileges to run.");
-		exit(EXIT_FAILURE);
-	}
+
+#ifdef WITH_LIBCAPNG
+        privileged_f=privileged_f || capng_have_capability(CAPNG_EFFECTIVE, CAP_NET_RAW);
+#endif
+        if(geteuid() && !privileged_f){
+	  puts("icmp6 needs raw socket privileges to run");
+	  exit(EXIT_FAILURE);
+        }
 
 	if(listen_f && !idata.iface_f){
 		puts("Must specify a network interface with the -i option when listening mode is selected");
@@ -1805,6 +1812,7 @@ void print_help(void){
 	     "  --sleep, -z                 Pause between sending ICMPv6 error messages\n"
 	     "  --help, -h                  Print help for the icmp6 tool\n"
 	     "  --verbose, -v               Be verbose\n"
+	     "  --privileged              Assume that the user is fully privileged\n"
 	     "\n"
 	     " Programmed by Fernando Gont for SI6 Networks <http://www.si6networks.com>\n"
 	     " Please send any bug reports to <fgont@si6networks.com>\n"

@@ -120,6 +120,7 @@ u_int8_t			hoplimit;
 
 char 				plinkaddr[ETHER_ADDR_PLEN];
 char 				psrcaddr[INET6_ADDRSTRLEN], pdstaddr[INET6_ADDRSTRLEN], pv6addr[INET6_ADDRSTRLEN];
+int                     privileged_f=0;
 unsigned char 		verbose_f=0;
 unsigned char 		floodf_f=0;
 unsigned char 		loop_f=0, sleep_f=0, localaddr_f=0, tstamp_f=1, pod_f=0;
@@ -205,6 +206,7 @@ int main(int argc, char **argv){
 		{"loop", no_argument, 0, 'l'},
 		{"sleep", required_argument, 0, 'z'},
 		{"verbose", no_argument, 0, 'v'},
+		{"privileged", no_argument, &privileged_f, 1},
 		{"help", no_argument, 0, 'h'}
 	};
 
@@ -226,6 +228,9 @@ int main(int argc, char **argv){
 		option= r;
 
 		switch(option) {
+		        case 0: 
+			        break;
+
 			case 'i':  /* Interface */
 				strncpy(idata.iface, optarg, IFACE_LENGTH-1);
 				idata.iface[IFACE_LENGTH-1]=0;
@@ -544,10 +549,13 @@ int main(int argc, char **argv){
 
 	verbose_f= idata.verbose_f;
 
-	if(geteuid()) {
-		puts("frag6 needs root privileges to run.");
-		exit(EXIT_FAILURE);
-	}
+#ifdef WITH_LIBCAPNG
+        privileged_f=privileged_f || capng_have_capability(CAPNG_EFFECTIVE, CAP_NET_RAW);
+#endif
+        if(geteuid() && !privileged_f){
+	  puts("frag6 needs raw network socket privileges to run");
+          exit(EXIT_FAILURE);
+        }
 
 	if(!idata.iface_f){
 		if(idata.dstaddr_f && IN6_IS_ADDR_LINKLOCAL(&(idata.dstaddr))){
@@ -557,7 +565,7 @@ int main(int argc, char **argv){
 	}
 
 	if(load_dst_and_pcap(&idata, LOAD_SRC_NXT_HOP) == FAILURE){
-		puts("Error while learning Souce Address and Next Hop");
+		puts("Error while learning Source Address and Next Hop");
 		exit(EXIT_FAILURE);
 	}
 

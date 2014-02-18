@@ -33,6 +33,11 @@ MANPREFIX=/usr/share
 endif
 endif 
 
+ifdef WITH_LIBCAPNG
+CFLAGS+= -DWITH_LIBCAPNG
+LDFLAGS+= -lcap-ng
+endif
+
 ETCPATH= $(DESTDIR)/etc
 MANPATH= $(DESTDIR)$(MANPREFIX)/man
 DATAPATH= $(DESTDIR)$(PREFIX)/share/ipv6toolkit
